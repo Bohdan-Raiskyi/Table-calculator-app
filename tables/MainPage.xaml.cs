@@ -93,12 +93,35 @@ namespace tables
             var col = Grid.GetColumn(entry) - 1;
             var content = entry.Text;
         }
+        private string ReplaceCellReferences(string expression)// для переводу посилань на клітинки в їх значення, або 0 
+        {
+            var regex = new Regex(@"([A-Z]+)(\d+)");
+            return regex.Replace(expression, match =>
+            {
+                string colName = match.Groups[1].Value;
+                int colIndex = GetColumnIndex(colName);
+                int rowIndex = int.Parse(match.Groups[2].Value) - 1;
+                var entry = grid.Children.OfType<Entry>().FirstOrDefault(c => Grid.GetRow(c) == rowIndex + 1 && Grid.GetColumn(c) == colIndex + 1);
+                return entry?.Text ?? "0"; // якщо в клітинці не коректний вираз, або її не існує
+            });
+        }
+        private int GetColumnIndex(string colName)// для визначення індексу стовпчика
+        {
+            int index = 0;
+            foreach (char c in colName)
+            {
+                index = index * 26 + (c - 'A' + 1);
+            }
+            return index - 1;
+        }
         private double EvaluateExpression(string expression)// обчислює вирази
         {
-            expression = Regex.Replace(expression, @"inc\((\d+)\)", "($1 + 1)");//inc
-            expression = Regex.Replace(expression, @"dec\((\d+)\)", "($1 - 1)");//dec
+            expression = ReplaceCellReferences(expression);//зміна назв клітинок на їх значення
+
+            expression = Regex.Replace(expression, @"(\d+)\+\+", "($1 + 1)");
+            expression = Regex.Replace(expression, @"(\d+)\-\-", "($1 - 1)");
             expression = Regex.Replace(expression, @"not\((\d+)\)", "(1 - $1)");//not
-            var regex = new Regex(@"(\d+)\s*\^\s*(\d+)");//^
+            var regex = new Regex(@"(\d+)\s*\^\s*(\d+)");// ^
             while (regex.IsMatch(expression))
             {
                 expression = regex.Replace(expression, match =>
@@ -112,7 +135,6 @@ namespace tables
             var value = table.Compute(expression, string.Empty);
             return Convert.ToDouble(value);
         }
-
         private void CalculateButton_Clicked(object sender, EventArgs e)
         {
             // обробка кнопки "Порахувати"
@@ -134,7 +156,6 @@ namespace tables
 
             }
         }
-
         private async void ExitButton_Clicked(object sender, EventArgs e)
         {
             // обробка кнопки "Вийти"
@@ -146,7 +167,7 @@ namespace tables
         }
         private async void HelpButton_Clicked(object sender,EventArgs e) // кнопка "Інформація"
         {
-            await DisplayAlert("Доступні операції", "(), +, -, *, /, ^, >, <, =, inc(n), dec(n), not(true/false)", "OK");
+            await DisplayAlert("Доступні операції", "(), +, -, *, /, ^, >, <, =, ++, --, not(true/false)", "OK");
         }
         private void AddRowButton_Clicked(object sender, EventArgs e)// кнопка "Додати рядок"
         {
