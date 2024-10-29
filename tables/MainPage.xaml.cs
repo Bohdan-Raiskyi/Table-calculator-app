@@ -131,6 +131,10 @@ namespace tables
                     return Math.Pow(baseNum, exponent).ToString();
                 });
             }
+            if(expression.Contains("/0"))
+            {
+                throw new DivideByZeroException("DivBy0");
+            }
             var table = new DataTable();
             var value = table.Compute(expression, string.Empty);
             return Convert.ToDouble(value);
